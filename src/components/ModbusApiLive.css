@@ -1,0 +1,140 @@
+.modbus-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.modbus-container h1 {
+  color: #d32f2f;
+  margin-bottom: 10px;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  margin: 15px 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card h2 {
+  margin-top: 0;
+  color: #333;
+  font-size: 20px;
+  margin-bottom: 15px;
+}
+
+.temp {
+  font-size: 28px;
+  font-weight: bold;
+  color: #1976d2;
+  margin: 5px 0;
+}
+
+.label {
+  color: #666;
+  font-size: 14px;
+  margin-top: 10px;
+  margin-bottom: 5px;
+}
+
+button {
+  background: #1976d2;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin: 5px;
+  font-size: 14px;
+  transition: background 0.3s;
+}
+
+button:hover {
+  background: #1565c0;
+}
+
+button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+input[type="number"] {
+  padding: 8px;
+  margin: 5px;
+  border: 2px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 100px;
+}
+
+input[type="number"]:focus {
+  outline: none;
+  border-color: #1976d2;
+}
+
+.status {
+  padding: 6px 12px;
+  border-radius: 4px;
+  display: inline-block;
+  font-weight: 500;
+}
+
+.status.on {
+  background: #4caf50;
+  color: white;
+}
+
+.status.off {
+  background: #f44336;
+  color: white;
+}
+
+.demand-status {
+  padding: 6px 12px;
+  margin: 3px 0;
+  border-radius: 4px;
+  background: #e0e0e0;
+  color: #666;
+  font-size: 14px;
+}
+
+.demand-status.active {
+  background: #1976d2;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  border: 2px solid #0d47a1;
+}
+
+.error {
+  background: #f44336;
+  color: white;
+  padding: 15px;
+  border-radius: 5px;
+  margin: 20px 0;
+}
+
+.heat-curve-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+}
+
+.heat-curve-table th {
+  background: #e0e0e0;
+  padding: 10px;
+  border: 1px solid #ccc;
+  font-weight: 500;
+  text-align: center;
+}
+
+.heat-curve-table td {
+  padding: 10px;
+  border: 1px solid #ccc;
+  text-align: center;
+}
+
+.heat-curve-table input {
+  width: 80px;
+  text-align: center;
+}
