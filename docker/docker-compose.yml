@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  ui:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: energy-control-ui
+    container_name: energy-control-ui
+    environment:
+      API_HOST: host.docker.internal:8080
+    ports:
+      - "3000:80"
+    networks:
+      - energy-network
+    restart: unless-stopped
+
+
+networks:
+  energy-network:
+    driver: bridge
