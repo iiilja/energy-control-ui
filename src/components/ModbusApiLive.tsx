@@ -17,19 +17,19 @@ const demandTexts: Record<number, string> = {
 
 const ModbusApiLive = () => {
   const [data, setData] = useState<HeatPumpData | null>(null);
-  const [rebootStats, setRebootStats] = useState<RebootStats | null>(null);
+  // const [rebootStats, setRebootStats] = useState<RebootStats | null>(null);
   const [error, setError] = useState('');
   const [tempInput, setTempInput] = useState('21.0');
   const [curveInputs, setCurveInputs] = useState<string[]>([]);
-  const [hwcPumpOnDuration, setHwcPumpOnDuration] = useState<number | undefined>(0);
-  const [hwcPumpOffDuration, setHwcPumpOffDuration] = useState<number | undefined>(0);
+  // const [hwcPumpOnDuration, setHwcPumpOnDuration] = useState<number | undefined>(0);
+  // const [hwcPumpOffDuration, setHwcPumpOffDuration] = useState<number | undefined>(0);
 
   const fetchData = async () => {
     try {
       const response = await heatPumpAPI.fetchData();
       setData(response.data);
-      setHwcPumpOnDuration(response.data.pump.onDuration);
-      setHwcPumpOffDuration(response.data.pump.offDuration);
+      // setHwcPumpOnDuration(response.data.pump.onDuration);
+      // setHwcPumpOffDuration(response.data.pump.offDuration);
       setTempInput(response.data.heating.setpoint.toFixed(1));
       setCurveInputs(response.data.heatCurve.supplyTemp.map(t => t.toFixed(1)));
       setError('');
@@ -38,18 +38,18 @@ const ModbusApiLive = () => {
     }
   };
 
-  const fetchRebootStats = async () => {
-    try {
-      const response = await heatPumpAPI.fetchRebootStats();
-      setRebootStats(response.data);
-    } catch (err: any) {
-      console.error('Error fetching reboot stats:', err);
-    }
-  };
+  // const fetchRebootStats = async () => {
+  //   try {
+  //     const response = await heatPumpAPI.fetchRebootStats();
+  //     setRebootStats(response.data);
+  //   } catch (err: any) {
+  //     console.error('Error fetching reboot stats:', err);
+  //   }
+  // };
 
   useEffect(() => {
     fetchData();
-    fetchRebootStats();
+    // fetchRebootStats();
     const dataInterval = setInterval(fetchData, 15000);
     return () => {
       clearInterval(dataInterval);
@@ -96,38 +96,38 @@ const ModbusApiLive = () => {
     }
   };
 
-  const setHWCPumpAuto = async () => {
-    try {
-      await heatPumpAPI.setPump({ autoMode: true, onDuration: hwcPumpOnDuration, offDuration: hwcPumpOffDuration });
-      alert('Auto mode activated');
-      fetchData();
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
-    }
-  };
+  // const setHWCPumpAuto = async () => {
+  //   try {
+  //     await heatPumpAPI.setPump({ autoMode: true, onDuration: hwcPumpOnDuration, offDuration: hwcPumpOffDuration });
+  //     alert('Auto mode activated');
+  //     fetchData();
+  //   } catch (err: any) {
+  //     alert(`Error: ${err.message}`);
+  //   }
+  // };
+  //
+  // const setHWCPumpManual = async (state: boolean) => {
+  //   try {
+  //     await heatPumpAPI.setPump({ manualState: state });
+  //     alert(state ? 'Pump ON' : 'Pump OFF');
+  //     fetchData();
+  //   } catch (err: any) {
+  //     alert(`Error: ${err.message}`);
+  //   }
+  // };
 
-  const setHWCPumpManual = async (state: boolean) => {
-    try {
-      await heatPumpAPI.setPump({ manualState: state });
-      alert(state ? 'Pump ON' : 'Pump OFF');
-      fetchData();
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
-    }
-  };
-
-  const resetRebootStats = async () => {
-    if (!confirm('Are you sure you want to reset reboot statistics?')) {
-      return;
-    }
-    try {
-      const response = await heatPumpAPI.resetRebootStats();
-      alert(response.data.message);
-      fetchRebootStats();
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
-    }
-  };
+  // const resetRebootStats = async () => {
+  //   if (!confirm('Are you sure you want to reset reboot statistics?')) {
+  //     return;
+  //   }
+  //   try {
+  //     const response = await heatPumpAPI.resetRebootStats();
+  //     alert(response.data.message);
+  //     fetchRebootStats();
+  //   } catch (err: any) {
+  //     alert(`Error: ${err.message}`);
+  //   }
+  // };
 
   if (error) {
     return <div className="error">{error}</div>;
@@ -266,61 +266,61 @@ const ModbusApiLive = () => {
       </div>
 
       {/* Hot Water Circulation Pump */}
-      <div className="card">
-        <h2>Hot Water Circulation Pump</h2>
-        <div className="label">Operating Mode</div>
-        <span className={`status ${data.pump.autoMode ? 'on' : 'off'}`}>
-          {data.pump.autoMode ? 'Automatic' : 'Manual'}
-        </span>
-        <br /><br />
-        <div className="label">Pump State</div>
-        <span className={`status ${data.pump.currentState ? 'on' : 'off'}`}>
-          {data.pump.currentState ? 'ON' : 'OFF'}
-        </span>
-        <br /><br />
-        {data.pump.autoMode && data.pump.remainingMinutes !== undefined && (
-          <div>
-            <small>Remaining: {data.pump.remainingMinutes} min</small><br /><br />
-          </div>
-        )}
-        On time: <input
-          type="number"
-          min="1"
-          max="60"
-          value={hwcPumpOnDuration}
-          onChange={(e) => setHwcPumpOnDuration(parseInt(e.target.value))}
-        /> min<br />
-        Interval: <input
-          type="number"
-          min="1"
-          max="120"
-          value={hwcPumpOffDuration}
-          onChange={(e) => setHwcPumpOffDuration(parseInt(e.target.value))}
-        /> min<br /><br />
-        <button onClick={setHWCPumpAuto}>Auto Mode</button>
-        <button onClick={() => setHWCPumpManual(true)}>ON</button>
-        <button onClick={() => setHWCPumpManual(false)}>OFF</button>
-      </div>
+      {/*<div className="card">*/}
+      {/*  <h2>Hot Water Circulation Pump</h2>*/}
+      {/*  <div className="label">Operating Mode</div>*/}
+      {/*  <span className={`status ${data.pump.autoMode ? 'on' : 'off'}`}>*/}
+      {/*    {data.pump.autoMode ? 'Automatic' : 'Manual'}*/}
+      {/*  </span>*/}
+      {/*  <br /><br />*/}
+      {/*  <div className="label">Pump State</div>*/}
+      {/*  <span className={`status ${data.pump.currentState ? 'on' : 'off'}`}>*/}
+      {/*    {data.pump.currentState ? 'ON' : 'OFF'}*/}
+      {/*  </span>*/}
+      {/*  <br /><br />*/}
+      {/*  {data.pump.autoMode && data.pump.remainingMinutes !== undefined && (*/}
+      {/*    <div>*/}
+      {/*      <small>Remaining: {data.pump.remainingMinutes} min</small><br /><br />*/}
+      {/*    </div>*/}
+      {/*  )}*/}
+      {/*  On time: <input*/}
+      {/*    type="number"*/}
+      {/*    min="1"*/}
+      {/*    max="60"*/}
+      {/*    value={hwcPumpOnDuration}*/}
+      {/*    onChange={(e) => setHwcPumpOnDuration(parseInt(e.target.value))}*/}
+      {/*  /> min<br />*/}
+      {/*  Interval: <input*/}
+      {/*    type="number"*/}
+      {/*    min="1"*/}
+      {/*    max="120"*/}
+      {/*    value={hwcPumpOffDuration}*/}
+      {/*    onChange={(e) => setHwcPumpOffDuration(parseInt(e.target.value))}*/}
+      {/*  /> min<br /><br />*/}
+      {/*  <button onClick={setHWCPumpAuto}>Auto Mode</button>*/}
+      {/*  <button onClick={() => setHWCPumpManual(true)}>ON</button>*/}
+      {/*  <button onClick={() => setHWCPumpManual(false)}>OFF</button>*/}
+      {/*</div>*/}
 
       {/* Reboot Statistics */}
-      {rebootStats && (
-        <div className="card">
-          <h2>Reboot Statistics</h2>
-          <div>
-            Total reboots: <b>{rebootStats.totalReboots}</b><br />
-            Watchdog reboots: <b>{rebootStats.watchdogReboots}</b><br />
-            Panic reboots: <b>{rebootStats.panicReboots}</b><br />
-            Normal reboots: <b>{rebootStats.normalReboots}</b><br />
-            Last reset reason: <b>{rebootStats.lastResetReason}</b><br />
-            Uptime: <b>
-              {Math.floor(rebootStats.uptimeSeconds / 3600)} h{' '}
-              {Math.floor((rebootStats.uptimeSeconds % 3600) / 60)} min
-            </b>
-          </div>
-          <br />
-          <button onClick={resetRebootStats}>Reset Statistics</button>
-        </div>
-      )}
+      {/*{rebootStats && (*/}
+      {/*  <div className="card">*/}
+      {/*    <h2>Reboot Statistics</h2>*/}
+      {/*    <div>*/}
+      {/*      Total reboots: <b>{rebootStats.totalReboots}</b><br />*/}
+      {/*      Watchdog reboots: <b>{rebootStats.watchdogReboots}</b><br />*/}
+      {/*      Panic reboots: <b>{rebootStats.panicReboots}</b><br />*/}
+      {/*      Normal reboots: <b>{rebootStats.normalReboots}</b><br />*/}
+      {/*      Last reset reason: <b>{rebootStats.lastResetReason}</b><br />*/}
+      {/*      Uptime: <b>*/}
+      {/*        {Math.floor(rebootStats.uptimeSeconds / 3600)} h{' '}*/}
+      {/*        {Math.floor((rebootStats.uptimeSeconds % 3600) / 60)} min*/}
+      {/*      </b>*/}
+      {/*    </div>*/}
+      {/*    <br />*/}
+      {/*    <button onClick={resetRebootStats}>Reset Statistics</button>*/}
+      {/*  </div>*/}
+      {/*)}*/}
     </div>
   );
 };

@@ -1,14 +1,14 @@
 import axios, { AxiosResponse } from 'axios';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: '/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
 const modbusApi = axios.create({
-  baseURL: '/modbus-api',
+  baseURL: '/api/v1/thermia',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -74,13 +74,13 @@ export interface HeatPumpData {
     outdoorTemp: number[];
     supplyTemp: number[];
   };
-  pump: {
-    autoMode: boolean;
-    currentState: boolean;
-    onDuration: number;
-    offDuration: number;
-    remainingMinutes?: number;
-  };
+  // pump: {
+  //   autoMode: boolean;
+  //   currentState: boolean;
+  //   onDuration: number;
+  //   offDuration: number;
+  //   remainingMinutes?: number;
+  // };
 }
 
 export interface RebootStats {
@@ -129,6 +129,25 @@ export const heatingAPI = {
     api.post('/v1/heating/setpoint/schedule', schedules),
   applyTemplate: (date: string) =>
     api.post('/v1/heating/setpoint/schedule/apply-template', null, { params: { date } }),
+};
+
+export interface SungrowStatus {
+  running: boolean;
+  powerLimitEnabled: boolean;
+  powerLimitPercent: number;
+  powerLimitKw: number;
+  activePowerW: number;
+  dailyEnergyKwh: number;
+  totalEnergyKwh: number;
+}
+
+export const sungrowAPI = {
+  getStatus: (): Promise<AxiosResponse<SungrowStatus>> => api.get('/sungrow/status'),
+  setPowerLimit: (limit: { kw?: number; percent?: number }) => api.post('/sungrow/power-limit', limit),
+  enablePowerLimit: () => api.post('/sungrow/power-limit/enable'),
+  disablePowerLimit: () => api.post('/sungrow/power-limit/disable'),
+  start: () => api.post('/sungrow/start'),
+  stop: () => api.post('/sungrow/stop'),
 };
 
 export default api;

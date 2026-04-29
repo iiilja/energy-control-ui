@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import ModbusApiLive from './ModbusApiLive';
+import SungrowInverter from './SungrowInverter';
 import './Layout.css';
 
 const Layout = () => {
@@ -36,12 +37,19 @@ const Layout = () => {
         >
           Heating Schedule
         </button>
+        <button
+          className={`tab ${activeTab === 'sungrow' ? 'active' : ''}`}
+          onClick={() => setActiveTab('sungrow')}
+        >
+          Sungrow PV
+        </button>
       </nav>
 
       <main className="content">
         {activeTab === 'modbus' && <ModbusApiLive />}
         {activeTab === 'nordpool' && <div>Nordpool Prices (Coming soon)</div>}
         {activeTab === 'schedule' && <div>Heating Schedule (Coming soon)</div>}
+        {activeTab === 'sungrow' && <SungrowInverter />}
       </main>
     </div>
   );
