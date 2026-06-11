@@ -1,11 +1,8 @@
-import { useState } from 'react';
+import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import ModbusApiLive from './ModbusApiLive';
-import SungrowInverter from './SungrowInverter';
 import './Layout.css';
 
 const Layout = () => {
-  const [activeTab, setActiveTab] = useState('modbus');
   const { user, logout } = useAuth();
 
   return (
@@ -19,37 +16,22 @@ const Layout = () => {
       </header>
 
       <nav className="tabs">
-        <button
-          className={`tab ${activeTab === 'modbus' ? 'active' : ''}`}
-          onClick={() => setActiveTab('modbus')}
-        >
+        <NavLink to="/modbus" className={({ isActive }) => `tab${isActive ? ' active' : ''}`}>
           Modbus API Live
-        </button>
-        <button
-          className={`tab ${activeTab === 'nordpool' ? 'active' : ''}`}
-          onClick={() => setActiveTab('nordpool')}
-        >
+        </NavLink>
+        <NavLink to="/nordpool" className={({ isActive }) => `tab${isActive ? ' active' : ''}`}>
           Nordpool Prices
-        </button>
-        <button
-          className={`tab ${activeTab === 'schedule' ? 'active' : ''}`}
-          onClick={() => setActiveTab('schedule')}
-        >
+        </NavLink>
+        <NavLink to="/schedule" className={({ isActive }) => `tab${isActive ? ' active' : ''}`}>
           Heating Schedule
-        </button>
-        <button
-          className={`tab ${activeTab === 'sungrow' ? 'active' : ''}`}
-          onClick={() => setActiveTab('sungrow')}
-        >
+        </NavLink>
+        <NavLink to="/sungrow" className={({ isActive }) => `tab${isActive ? ' active' : ''}`}>
           Sungrow PV
-        </button>
+        </NavLink>
       </nav>
 
       <main className="content">
-        {activeTab === 'modbus' && <ModbusApiLive />}
-        {activeTab === 'nordpool' && <div>Nordpool Prices (Coming soon)</div>}
-        {activeTab === 'schedule' && <div>Heating Schedule (Coming soon)</div>}
-        {activeTab === 'sungrow' && <SungrowInverter />}
+        <Outlet />
       </main>
     </div>
   );

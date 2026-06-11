@@ -1,9 +1,16 @@
 import { useState, useEffect } from 'react';
-import { sungrowAPI, SungrowStatus } from '../services/api';
+import { sungrowAPI, nordpoolAPI, SungrowStatus, NordpoolPriceEntry } from '../services/api';
 import './ModbusApiLive.css';
+
+const msUntilNextQuarter = () => {
+  const now = new Date();
+  const ms = (now.getMinutes() * 60 + now.getSeconds()) * 1000 + now.getMilliseconds();
+  return 15 * 60 * 1000 - (ms % (15 * 60 * 1000));
+};
 
 const SungrowInverter = () => {
   const [status, setStatus] = useState<SungrowStatus | null>(null);
+  const [currentPrice, setCurrentPrice] = useState<NordpoolPriceEntry | null>(null);
   const [error, setError] = useState('');
   const [kwInput, setKwInput] = useState('2.0');
 
@@ -17,10 +24,32 @@ const SungrowInverter = () => {
     }
   };
 
+  const fetchCurrentPrice = async () => {
+    try {
+      const response = await nordpoolAPI.getCurrentPrice();
+      setCurrentPrice(response.data);
+    } catch {
+      setCurrentPrice(null);
+    }
+  };
+
   useEffect(() => {
     fetchStatus();
-    const interval = setInterval(fetchStatus, 15000);
-    return () => clearInterval(interval);
+    const statusInterval = setInterval(fetchStatus, 15000);
+    return () => clearInterval(statusInterval);
+  }, []);
+
+  useEffect(() => {
+    fetchCurrentPrice();
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const scheduleNext = () => {
+      timeoutId = setTimeout(() => {
+        fetchCurrentPrice();
+        scheduleNext();
+      }, msUntilNextQuarter());
+    };
+    scheduleNext();
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const setPowerLimit = async () => {
@@ -96,6 +125,13 @@ const SungrowInverter = () => {
         <h2>Live Generation</h2>
         <div className="label">Active Power</div>
         <div style={{ fontSize: '1.6rem', fontWeight: 'bold' }}>{formatPower(status.activePowerW)}</div>
+        <br />
+        <div className="label">Current Price</div>
+        <div style={{ fontSize: '1.3rem', fontWeight: 'bold' }}>
+          {currentPrice != null
+            ? `${currentPrice.price.toFixed(2)} EUR/MWh`
+            : '—'}
+        </div>
         <br />
         <div className="label">Today's Yield</div>
         <div><b>{status.dailyEnergyKwh.toFixed(1)} kWh</b></div>

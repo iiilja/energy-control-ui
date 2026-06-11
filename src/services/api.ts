@@ -102,7 +102,7 @@ export interface SetpointScheduleItem {
 export const authAPI = {
   login: (username: string, password: string) => {
     const token = btoa(`${username}:${password}`);
-    return api.get('/v1/auth/test', {
+    return api.get('/auth/test', {
       headers: { Authorization: `Basic ${token}` },
     });
   },
@@ -118,17 +118,39 @@ export const heatPumpAPI = {
   resetRebootStats: () => modbusApi.post('/reboot-stats'),
 };
 
+export interface NordpoolPriceEntry {
+  timestamp: string;
+  price: number;
+}
+
 export const nordpoolAPI = {
-  fetchPrices: () => api.post('/v1/nordpool/fetch'),
+  fetchPrices: () => api.post('/nordpool/fetch'),
+  getPrices: (date?: string): Promise<AxiosResponse<NordpoolPriceEntry[]>> =>
+    api.get('/nordpool/prices', { params: date ? { date } : {} }),
+  getHourlyAveragePrices: (date?: string): Promise<AxiosResponse<NordpoolPriceEntry[]>> =>
+    api.get('/nordpool/prices/hourly-average', { params: date ? { date } : {} }),
+  getCurrentPrice: (): Promise<AxiosResponse<NordpoolPriceEntry>> =>
+    api.get('/nordpool/current-price'),
 };
+
+export interface WeeklyScheduleEntry {
+  id: number;
+  dayOfWeek: number;
+  startTime: string;
+  setpoint: number;
+}
 
 export const heatingAPI = {
   getSchedule: (date: string): Promise<AxiosResponse<SetpointScheduleItem[]>> =>
-    api.get('/v1/heating/setpoint/schedule', { params: { date } }),
+    api.get('/heating/setpoint/schedule', { params: { date } }),
   saveSchedule: (schedules: { nordpoolPriceId: number; setpoint: number }[]) =>
-    api.post('/v1/heating/setpoint/schedule', schedules),
+    api.post('/heating/setpoint/schedule', schedules),
   applyTemplate: (date: string) =>
-    api.post('/v1/heating/setpoint/schedule/apply-template', null, { params: { date } }),
+    api.post('/heating/setpoint/schedule/apply-template', null, { params: { date } }),
+  getWeeklySchedule: (): Promise<AxiosResponse<WeeklyScheduleEntry[]>> =>
+    api.get('/heating/setpoint/weekly-schedule'),
+  saveWeeklySchedule: (entries: { dayOfWeek: number; startTime: string; setpoint: number }[]) =>
+    api.put('/heating/setpoint/weekly-schedule', entries),
 };
 
 export interface SungrowStatus {
