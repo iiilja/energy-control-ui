@@ -123,13 +123,19 @@ export interface NordpoolPriceEntry {
   price: number;
 }
 
+export interface CurrentNordpoolPrice {
+  timestamp: string;
+  price: number;
+  hourlyAvgPrice: number | null;
+}
+
 export const nordpoolAPI = {
   fetchPrices: () => api.post('/nordpool/fetch'),
   getPrices: (date?: string): Promise<AxiosResponse<NordpoolPriceEntry[]>> =>
     api.get('/nordpool/prices', { params: date ? { date } : {} }),
   getHourlyAveragePrices: (date?: string): Promise<AxiosResponse<NordpoolPriceEntry[]>> =>
     api.get('/nordpool/prices/hourly-average', { params: date ? { date } : {} }),
-  getCurrentPrice: (): Promise<AxiosResponse<NordpoolPriceEntry>> =>
+  getCurrentPrice: (): Promise<AxiosResponse<CurrentNordpoolPrice>> =>
     api.get('/nordpool/current-price'),
 };
 

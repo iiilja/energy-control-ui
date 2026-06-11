@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { sungrowAPI, nordpoolAPI, SungrowStatus, NordpoolPriceEntry } from '../services/api';
+import { sungrowAPI, nordpoolAPI, SungrowStatus, CurrentNordpoolPrice } from '../services/api';
 import './ModbusApiLive.css';
 
 const msUntilNextQuarter = () => {
@@ -10,7 +10,7 @@ const msUntilNextQuarter = () => {
 
 const SungrowInverter = () => {
   const [status, setStatus] = useState<SungrowStatus | null>(null);
-  const [currentPrice, setCurrentPrice] = useState<NordpoolPriceEntry | null>(null);
+  const [currentPrice, setCurrentPrice] = useState<CurrentNordpoolPrice | null>(null);
   const [error, setError] = useState('');
   const [kwInput, setKwInput] = useState('2.0');
 
@@ -128,9 +128,11 @@ const SungrowInverter = () => {
         <br />
         <div className="label">Current Price</div>
         <div style={{ fontSize: '1.3rem', fontWeight: 'bold' }}>
-          {currentPrice != null
-            ? `${currentPrice.price.toFixed(2)} EUR/MWh`
-            : '—'}
+          {currentPrice != null ? `${currentPrice.price.toFixed(2)} EUR/MWh` : '—'}
+        </div>
+        <div className="label">Hour Average</div>
+        <div style={{ fontSize: '1.3rem', fontWeight: 'bold' }}>
+          {currentPrice?.hourlyAvgPrice != null ? `${currentPrice.hourlyAvgPrice.toFixed(2)} EUR/MWh` : '—'}
         </div>
         <br />
         <div className="label">Today's Yield</div>
