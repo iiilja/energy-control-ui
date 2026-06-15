@@ -74,6 +74,17 @@ export interface HeatPumpData {
     outdoorTemp: number[];
     supplyTemp: number[];
   };
+  internalHeater: {
+    step: number;
+  };
+  enables: {
+    heating: boolean;
+    tapWater: boolean;
+    cooling: boolean;
+    hotGasPump: boolean;
+    antiLegionella: boolean;
+    internalHeater: boolean;
+  };
   // pump: {
   //   autoMode: boolean;
   //   currentState: boolean;
@@ -116,6 +127,14 @@ export const heatPumpAPI = {
   updateHeatCurve: (points: number[]) => modbusApi.post('/heatcurve', { points }),
   setPump: (config: any) => modbusApi.post('/hwc-pump', config),
   resetRebootStats: () => modbusApi.post('/reboot-stats'),
+  enableHeating: () => modbusApi.post('/heating/enable'),
+  disableHeating: () => modbusApi.post('/heating/disable'),
+  enableTapWater: () => modbusApi.post('/tap-water/enable'),
+  disableTapWater: () => modbusApi.post('/tap-water/disable'),
+  enableCooling: () => modbusApi.post('/cooling/enable'),
+  disableCooling: () => modbusApi.post('/cooling/disable'),
+  enableInternalHeater: () => modbusApi.post('/internal-heater/enable'),
+  disableInternalHeater: () => modbusApi.post('/internal-heater/disable'),
 };
 
 export interface NordpoolPriceEntry {

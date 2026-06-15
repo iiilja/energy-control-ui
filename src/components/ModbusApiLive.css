@@ -73,7 +73,8 @@ input[type="number"]:focus {
 }
 
 .status {
-  padding: 6px 12px;
+  font-size: 12px;
+  padding: 4px 8px;
   border-radius: 4px;
   display: inline-block;
   font-weight: 500;
@@ -86,6 +87,11 @@ input[type="number"]:focus {
 
 .status.off {
   background: #f44336;
+  color: white;
+}
+
+.status.active {
+  background: #f57c00;
   color: white;
 }
 
@@ -112,6 +118,21 @@ input[type="number"]:focus {
   padding: 15px;
   border-radius: 5px;
   margin: 20px 0;
+}
+
+.functions-grid {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.functions-grid .status {
+  justify-self: start;
+}
+
+.functions-grid button {
+  margin: 0;
 }
 
 .heat-curve-table {

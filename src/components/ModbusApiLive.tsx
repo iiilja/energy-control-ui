@@ -56,6 +56,42 @@ const ModbusApiLive = () => {
     };
   }, []);
 
+  const toggleHeating = async (enable: boolean) => {
+    try {
+      enable ? await heatPumpAPI.enableHeating() : await heatPumpAPI.disableHeating();
+      fetchData();
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+
+  const toggleTapWater = async (enable: boolean) => {
+    try {
+      enable ? await heatPumpAPI.enableTapWater() : await heatPumpAPI.disableTapWater();
+      fetchData();
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+
+  const toggleCooling = async (enable: boolean) => {
+    try {
+      enable ? await heatPumpAPI.enableCooling() : await heatPumpAPI.disableCooling();
+      fetchData();
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+
+  const toggleInternalHeater = async (enable: boolean) => {
+    try {
+      enable ? await heatPumpAPI.enableInternalHeater() : await heatPumpAPI.disableInternalHeater();
+      fetchData();
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
+  };
+
   const setMode = async (mode: number) => {
     try {
       const response = await heatPumpAPI.setMode(mode);
@@ -168,6 +204,40 @@ const ModbusApiLive = () => {
         <button onClick={() => setMode(1)}>OFF</button>
         <button onClick={() => setMode(2)}>Standby</button>
         <button onClick={() => setMode(3)}>ON/Auto</button>
+      </div>
+
+      {/* Function Enables */}
+      <div className="card">
+        <h2>Functions</h2>
+        <div className="functions-grid">
+          <span>Space Heating</span>
+          <span className={`status ${data.enables.heating ? 'on' : 'off'}`}>
+            {data.enables.heating ? 'Enabled' : 'Disabled'}
+          </span>
+          <button onClick={() => toggleHeating(true)} disabled={data.enables.heating}>Enable</button>
+          <button onClick={() => toggleHeating(false)} disabled={!data.enables.heating}>Disable</button>
+
+          <span>Tap Water</span>
+          <span className={`status ${data.enables.tapWater ? 'on' : 'off'}`}>
+            {data.enables.tapWater ? 'Enabled' : 'Disabled'}
+          </span>
+          <button onClick={() => toggleTapWater(true)} disabled={data.enables.tapWater}>Enable</button>
+          <button onClick={() => toggleTapWater(false)} disabled={!data.enables.tapWater}>Disable</button>
+
+          <span>Cooling</span>
+          <span className={`status ${data.enables.cooling ? 'on' : 'off'}`}>
+            {data.enables.cooling ? 'Enabled' : 'Disabled'}
+          </span>
+          <button onClick={() => toggleCooling(true)} disabled={data.enables.cooling}>Enable</button>
+          <button onClick={() => toggleCooling(false)} disabled={!data.enables.cooling}>Disable</button>
+
+          <span>Internal Heater</span>
+          <span className={`status ${!data.enables.internalHeater ? 'off' : data.internalHeater.step > 0 ? 'active' : 'on'}`}>
+            {!data.enables.internalHeater ? 'Disabled' : data.internalHeater.step > 0 ? `Step ${data.internalHeater.step}` : 'Enabled'}
+          </span>
+          <button onClick={() => toggleInternalHeater(true)} disabled={data.enables.internalHeater}>Enable</button>
+          <button onClick={() => toggleInternalHeater(false)} disabled={!data.enables.internalHeater}>Disable</button>
+        </div>
       </div>
 
       {/* Temperatures */}
