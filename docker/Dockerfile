@@ -5,7 +5,9 @@
 # ===========================================================================
 # Build Stage
 # ===========================================================================
-FROM node:20-alpine AS build
+# Build stage runs on the host's native platform (x86_64 on GitHub Actions)
+# so Node/npm never runs under QEMU emulation.
+FROM --platform=$BUILDPLATFORM node:20-alpine AS build
 
 WORKDIR /app
 
