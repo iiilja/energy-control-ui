@@ -54,7 +54,7 @@ npm run build
 
 ## Deployment
 
-GitHub Actions builds and pushes the Docker image to `ghcr.io/iiilja/energy-control-ui:latest` on every push to `main`.
+GitHub Actions builds and pushes the ARM64 Docker image to `ghcr.io/iiilja/energy-control-ui:latest` on every push to `main` (H96 Pro+ / Amlogic S912). The legacy ARMv7 build (`build-armv7.yml`, Banana Pi) is manual dispatch only.
 
 The image uses Nginx to serve the static files and proxy `/api` requests to the API host at `172.17.0.1:8080` (Docker bridge).
 
