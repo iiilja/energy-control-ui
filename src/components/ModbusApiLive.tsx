@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { heatPumpAPI, HeatPumpData, RebootStats } from '../services/api';
+import { useState, useEffect, useRef } from 'react';
+import { heatPumpAPI, overrideAPI, apiErrorMessage, HeatPumpData, ManualOverride } from '../services/api';
 import './ModbusApiLive.css';
 
 const demandTexts: Record<number, string> = {
@@ -15,42 +15,58 @@ const demandTexts: Record<number, string> = {
   100: "OFF"
 };
 
+const modeTexts: Record<number, string> = { 1: 'OFF', 2: 'Standby', 3: 'ON/Auto' };
+
+/** "21:45", or "Sat 21:45" when it is not today. */
+const formatUntil = (iso: string): string => {
+  const date = new Date(iso);
+  const time = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return date.toDateString() === new Date().toDateString()
+    ? time
+    : `${date.toLocaleDateString('en-GB', { weekday: 'short' })} ${time}`;
+};
+
 const ModbusApiLive = () => {
   const [data, setData] = useState<HeatPumpData | null>(null);
-  // const [rebootStats, setRebootStats] = useState<RebootStats | null>(null);
+  const [override, setOverride] = useState<ManualOverride | null>(null);
   const [error, setError] = useState('');
   const [tempInput, setTempInput] = useState('21.0');
   const [curveInputs, setCurveInputs] = useState<string[]>([]);
-  // const [hwcPumpOnDuration, setHwcPumpOnDuration] = useState<number | undefined>(0);
-  // const [hwcPumpOffDuration, setHwcPumpOffDuration] = useState<number | undefined>(0);
+  // While the user is editing, the 15-second refresh must not overwrite the inputs.
+  const tempDirty = useRef(false);
+  const curveDirty = useRef(false);
 
   const fetchData = async () => {
     try {
       const response = await heatPumpAPI.fetchData();
       setData(response.data);
-      // setHwcPumpOnDuration(response.data.pump.onDuration);
-      // setHwcPumpOffDuration(response.data.pump.offDuration);
-      setTempInput(response.data.heating.setpoint.toFixed(1));
-      setCurveInputs(response.data.heatCurve.supplyTemp.map(t => t.toFixed(1)));
+      if (!tempDirty.current) {
+        setTempInput(response.data.heating.setpoint.toFixed(1));
+      }
+      if (!curveDirty.current) {
+        setCurveInputs(response.data.heatCurve.supplyTemp.map(t => t.toFixed(1)));
+      }
       setError('');
     } catch (err: any) {
-      setError(`Error loading data: ${err.message}`);
+      setError(`Error loading data: ${apiErrorMessage(err)}`);
     }
   };
 
-  // const fetchRebootStats = async () => {
-  //   try {
-  //     const response = await heatPumpAPI.fetchRebootStats();
-  //     setRebootStats(response.data);
-  //   } catch (err: any) {
-  //     console.error('Error fetching reboot stats:', err);
-  //   }
-  // };
+  const fetchOverride = async () => {
+    try {
+      setOverride(await overrideAPI.get());
+    } catch (err: any) {
+      console.error('Error loading manual override:', err);
+    }
+  };
 
   useEffect(() => {
-    fetchData();
-    // fetchRebootStats();
-    const dataInterval = setInterval(fetchData, 15000);
+    const refresh = () => {
+      fetchData();
+      fetchOverride();
+    };
+    refresh();
+    const dataInterval = setInterval(refresh, 15000);
     return () => {
       clearInterval(dataInterval);
     };
@@ -61,7 +77,7 @@ const ModbusApiLive = () => {
       enable ? await heatPumpAPI.enableHeating() : await heatPumpAPI.disableHeating();
       fetchData();
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      alert(`Error: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -70,7 +86,7 @@ const ModbusApiLive = () => {
       enable ? await heatPumpAPI.enableTapWater() : await heatPumpAPI.disableTapWater();
       fetchData();
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      alert(`Error: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -79,7 +95,7 @@ const ModbusApiLive = () => {
       enable ? await heatPumpAPI.enableCooling() : await heatPumpAPI.disableCooling();
       fetchData();
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      alert(`Error: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -88,82 +104,64 @@ const ModbusApiLive = () => {
       enable ? await heatPumpAPI.enableInternalHeater() : await heatPumpAPI.disableInternalHeater();
       fetchData();
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      alert(`Error: ${apiErrorMessage(err)}`);
     }
   };
 
   const setMode = async (mode: number) => {
     try {
-      const response = await heatPumpAPI.setMode(mode);
-      alert(`Mode changed to: ${response.data.modeText}`);
+      await heatPumpAPI.setMode(mode);
+      alert(`Mode changed to: ${modeTexts[mode]}`);
       fetchData();
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      alert(`Error: ${apiErrorMessage(err)}`);
     }
   };
 
   const setTemp = async () => {
     const temp = parseFloat(tempInput);
-    if (temp < 15 || temp > 30) {
+    if (Number.isNaN(temp) || temp < 15 || temp > 30) {
       alert('Temperature must be between 15-30°C');
       return;
     }
     try {
-      const response = await heatPumpAPI.setSetpoint(temp);
-      alert(`Temperature set: ${response.data.temperature}°C`);
+      await heatPumpAPI.setSetpoint(temp);
+      tempDirty.current = false;
       fetchData();
+      fetchOverride();
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      alert(`Error: ${apiErrorMessage(err)}`);
     }
+  };
+
+  const cancelOverride = async () => {
+    try {
+      await overrideAPI.cancel();
+    } catch (err: any) {
+      if (err.response?.status !== 404) { // 404 = it has already ended
+        alert(`Error: ${apiErrorMessage(err)}`);
+        return;
+      }
+    }
+    fetchData();
+    fetchOverride();
   };
 
   const updateHeatCurve = async () => {
     const points = curveInputs.map(v => parseFloat(v));
-    if (points.some(v => v < 15 || v > 65)) {
+    if (points.some(v => Number.isNaN(v) || v < 15 || v > 65)) {
       alert('Error: temperature must be between 15-65°C');
       return;
     }
     try {
       await heatPumpAPI.updateHeatCurve(points);
+      curveDirty.current = false;
       alert('Heat curve successfully updated!');
       fetchData();
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      alert(`Error: ${apiErrorMessage(err)}`);
     }
   };
-
-  // const setHWCPumpAuto = async () => {
-  //   try {
-  //     await heatPumpAPI.setPump({ autoMode: true, onDuration: hwcPumpOnDuration, offDuration: hwcPumpOffDuration });
-  //     alert('Auto mode activated');
-  //     fetchData();
-  //   } catch (err: any) {
-  //     alert(`Error: ${err.message}`);
-  //   }
-  // };
-  //
-  // const setHWCPumpManual = async (state: boolean) => {
-  //   try {
-  //     await heatPumpAPI.setPump({ manualState: state });
-  //     alert(state ? 'Pump ON' : 'Pump OFF');
-  //     fetchData();
-  //   } catch (err: any) {
-  //     alert(`Error: ${err.message}`);
-  //   }
-  // };
-
-  // const resetRebootStats = async () => {
-  //   if (!confirm('Are you sure you want to reset reboot statistics?')) {
-  //     return;
-  //   }
-  //   try {
-  //     const response = await heatPumpAPI.resetRebootStats();
-  //     alert(response.data.message);
-  //     fetchRebootStats();
-  //   } catch (err: any) {
-  //     alert(`Error: ${err.message}`);
-  //   }
-  // };
 
   if (error) {
     return <div className="error">{error}</div>;
@@ -285,9 +283,27 @@ const ModbusApiLive = () => {
           min="15"
           max="30"
           value={tempInput}
-          onChange={(e) => setTempInput(e.target.value)}
+          onChange={(e) => {
+            tempDirty.current = true;
+            setTempInput(e.target.value);
+          }}
         />
         <button onClick={setTemp}>Set Temperature</button>
+        <br /><br />
+        {override ? (
+          <div>
+            <span className="status active">Manual override</span>{' '}
+            <b>{Number(override.setpoint).toFixed(1)}°C</b> until <b>{formatUntil(override.validUntil)}</b>{' '}
+            <small>({override.source === 'HEAT_PUMP' ? 'changed on the heat pump' : 'set here'})</small>
+            <br /><br />
+            <button onClick={cancelOverride}>Back to schedule</button>
+          </div>
+        ) : (
+          <small>
+            Follows the weekly schedule. A temperature set here (or on the heat pump) is kept for a few hours,
+            then the schedule takes over again.
+          </small>
+        )}
       </div>
 
       {/* Heat Curve */}
@@ -316,6 +332,7 @@ const ModbusApiLive = () => {
                     max="65"
                     value={curveInputs[i] || ''}
                     onChange={(e) => {
+                      curveDirty.current = true;
                       const newInputs = [...curveInputs];
                       newInputs[i] = e.target.value;
                       setCurveInputs(newInputs);
@@ -334,63 +351,6 @@ const ModbusApiLive = () => {
           Range: 15-65°C
         </small>
       </div>
-
-      {/* Hot Water Circulation Pump */}
-      {/*<div className="card">*/}
-      {/*  <h2>Hot Water Circulation Pump</h2>*/}
-      {/*  <div className="label">Operating Mode</div>*/}
-      {/*  <span className={`status ${data.pump.autoMode ? 'on' : 'off'}`}>*/}
-      {/*    {data.pump.autoMode ? 'Automatic' : 'Manual'}*/}
-      {/*  </span>*/}
-      {/*  <br /><br />*/}
-      {/*  <div className="label">Pump State</div>*/}
-      {/*  <span className={`status ${data.pump.currentState ? 'on' : 'off'}`}>*/}
-      {/*    {data.pump.currentState ? 'ON' : 'OFF'}*/}
-      {/*  </span>*/}
-      {/*  <br /><br />*/}
-      {/*  {data.pump.autoMode && data.pump.remainingMinutes !== undefined && (*/}
-      {/*    <div>*/}
-      {/*      <small>Remaining: {data.pump.remainingMinutes} min</small><br /><br />*/}
-      {/*    </div>*/}
-      {/*  )}*/}
-      {/*  On time: <input*/}
-      {/*    type="number"*/}
-      {/*    min="1"*/}
-      {/*    max="60"*/}
-      {/*    value={hwcPumpOnDuration}*/}
-      {/*    onChange={(e) => setHwcPumpOnDuration(parseInt(e.target.value))}*/}
-      {/*  /> min<br />*/}
-      {/*  Interval: <input*/}
-      {/*    type="number"*/}
-      {/*    min="1"*/}
-      {/*    max="120"*/}
-      {/*    value={hwcPumpOffDuration}*/}
-      {/*    onChange={(e) => setHwcPumpOffDuration(parseInt(e.target.value))}*/}
-      {/*  /> min<br /><br />*/}
-      {/*  <button onClick={setHWCPumpAuto}>Auto Mode</button>*/}
-      {/*  <button onClick={() => setHWCPumpManual(true)}>ON</button>*/}
-      {/*  <button onClick={() => setHWCPumpManual(false)}>OFF</button>*/}
-      {/*</div>*/}
-
-      {/* Reboot Statistics */}
-      {/*{rebootStats && (*/}
-      {/*  <div className="card">*/}
-      {/*    <h2>Reboot Statistics</h2>*/}
-      {/*    <div>*/}
-      {/*      Total reboots: <b>{rebootStats.totalReboots}</b><br />*/}
-      {/*      Watchdog reboots: <b>{rebootStats.watchdogReboots}</b><br />*/}
-      {/*      Panic reboots: <b>{rebootStats.panicReboots}</b><br />*/}
-      {/*      Normal reboots: <b>{rebootStats.normalReboots}</b><br />*/}
-      {/*      Last reset reason: <b>{rebootStats.lastResetReason}</b><br />*/}
-      {/*      Uptime: <b>*/}
-      {/*        {Math.floor(rebootStats.uptimeSeconds / 3600)} h{' '}*/}
-      {/*        {Math.floor((rebootStats.uptimeSeconds % 3600) / 60)} min*/}
-      {/*      </b>*/}
-      {/*    </div>*/}
-      {/*    <br />*/}
-      {/*    <button onClick={resetRebootStats}>Reset Statistics</button>*/}
-      {/*  </div>*/}
-      {/*)}*/}
     </div>
   );
 };

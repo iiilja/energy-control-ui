@@ -38,6 +38,10 @@ const errorInterceptor = (error: any) => {
 api.interceptors.response.use((response) => response, errorInterceptor);
 modbusApi.interceptors.response.use((response) => response, errorInterceptor);
 
+/** The reason given by the API (ProblemDetail `detail`), or the generic axios message. */
+export const apiErrorMessage = (err: any): string =>
+  err?.response?.data?.detail ?? err?.response?.data?.message ?? err?.message ?? 'Unknown error';
+
 export interface HeatPumpData {
   status: {
     connected: boolean;
@@ -85,26 +89,10 @@ export interface HeatPumpData {
     antiLegionella: boolean;
     internalHeater: boolean;
   };
-  // pump: {
-  //   autoMode: boolean;
-  //   currentState: boolean;
-  //   onDuration: number;
-  //   offDuration: number;
-  //   remainingMinutes?: number;
-  // };
-}
-
-export interface RebootStats {
-  totalReboots: number;
-  watchdogReboots: number;
-  panicReboots: number;
-  normalReboots: number;
-  lastResetReason: string;
-  uptimeSeconds: number;
 }
 
 export interface SetpointScheduleItem {
-  priceTimestamp: string;
+  timestamp: string;
   price: number;
   setpoint: number;
   nordpoolPriceId: number;
@@ -121,12 +109,10 @@ export const authAPI = {
 
 export const heatPumpAPI = {
   fetchData: (): Promise<AxiosResponse<HeatPumpData>> => modbusApi.get('/data'),
-  fetchRebootStats: (): Promise<AxiosResponse<RebootStats>> => modbusApi.get('/reboot-stats'),
   setMode: (mode: number) => modbusApi.post('/mode', { mode }),
+  /** A manual change: kept for heating.setpoint.manual_override.hours, then the schedule takes over. */
   setSetpoint: (temperature: number) => modbusApi.post('/setpoint', { temperature }),
-  updateHeatCurve: (points: number[]) => modbusApi.post('/heatcurve', { points }),
-  setPump: (config: any) => modbusApi.post('/hwc-pump', config),
-  resetRebootStats: () => modbusApi.post('/reboot-stats'),
+  updateHeatCurve: (points: number[]) => modbusApi.post('/heat-curve', { points }),
   enableHeating: () => modbusApi.post('/heating/enable'),
   disableHeating: () => modbusApi.post('/heating/disable'),
   enableTapWater: () => modbusApi.post('/tap-water/enable'),
@@ -170,12 +156,25 @@ export const heatingAPI = {
     api.get('/heating/setpoint/schedule', { params: { date } }),
   saveSchedule: (schedules: { nordpoolPriceId: number; setpoint: number }[]) =>
     api.post('/heating/setpoint/schedule', schedules),
-  applyTemplate: (date: string) =>
-    api.post('/heating/setpoint/schedule/apply-template', null, { params: { date } }),
   getWeeklySchedule: (): Promise<AxiosResponse<WeeklyScheduleEntry[]>> =>
     api.get('/heating/setpoint/weekly-schedule'),
   saveWeeklySchedule: (entries: { dayOfWeek: number; startTime: string; setpoint: number }[]) =>
     api.put('/heating/setpoint/weekly-schedule', entries),
+};
+
+export interface ManualOverride {
+  setpoint: number;
+  /** HEAT_PUMP = changed on the heat pump itself, API = set from here */
+  source: 'HEAT_PUMP' | 'API';
+  startedAt: string;
+  validUntil: string;
+}
+
+export const overrideAPI = {
+  /** The manual setpoint override in effect, or null when the schedule is in control (204). */
+  get: (): Promise<ManualOverride | null> =>
+    api.get('/heating/setpoint/override').then((r) => (r.status === 204 || !r.data ? null : r.data)),
+  cancel: () => api.delete('/heating/setpoint/override'),
 };
 
 export interface SungrowStatus {
