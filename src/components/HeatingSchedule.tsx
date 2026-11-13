@@ -60,7 +60,8 @@ const HeatingSchedule = () => {
       );
       await load();
     } catch (err: any) {
-      setError(`Failed to save: ${err.message}`);
+      // API returns RFC 7807 problem details; `detail` names the invalid field
+      setError(`Failed to save: ${err.response?.data?.detail ?? err.message}`);
     } finally {
       setSaving(false);
     }
@@ -174,7 +175,7 @@ const HeatingSchedule = () => {
             <input
               type="number"
               step="0.5"
-              min="10"
+              min="15"
               max="30"
               value={Number(entry.setpoint)}
               onChange={e => update(entry.id, 'setpoint', parseFloat(e.target.value))}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { sungrowAPI, nordpoolAPI, SungrowStatus, CurrentNordpoolPrice } from '../services/api';
+import { sungrowAPI, nordpoolAPI, SungrowStatus, CurrentNordpoolPrice, apiErrorMessage } from '../services/api';
 import './ModbusApiLive.css';
 
 const msUntilNextQuarter = () => {
@@ -20,7 +20,7 @@ const SungrowInverter = () => {
       setStatus(response.data);
       setError('');
     } catch (err: any) {
-      setError(`Error loading inverter status: ${err.message}`);
+      setError(`Error loading inverter status: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -46,7 +46,7 @@ const SungrowInverter = () => {
       timeoutId = setTimeout(() => {
         fetchCurrentPrice();
         scheduleNext();
-      }, msUntilNextQuarter());
+      }, msUntilNextQuarter() + 3000); // a few seconds late, so the server is surely in the new slot
     };
     scheduleNext();
     return () => clearTimeout(timeoutId);
@@ -63,7 +63,7 @@ const SungrowInverter = () => {
       alert(`Power limit set to ${kw} kW`);
       fetchStatus();
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      alert(`Error: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -72,7 +72,7 @@ const SungrowInverter = () => {
       await sungrowAPI.enablePowerLimit();
       fetchStatus();
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      alert(`Error: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -81,7 +81,7 @@ const SungrowInverter = () => {
       await sungrowAPI.disablePowerLimit();
       fetchStatus();
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      alert(`Error: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -91,7 +91,7 @@ const SungrowInverter = () => {
       await sungrowAPI.start();
       fetchStatus();
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      alert(`Error: ${apiErrorMessage(err)}`);
     }
   };
 
@@ -101,7 +101,7 @@ const SungrowInverter = () => {
       await sungrowAPI.stop();
       fetchStatus();
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      alert(`Error: ${apiErrorMessage(err)}`);
     }
   };
 
