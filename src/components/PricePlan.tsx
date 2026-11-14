@@ -3,7 +3,7 @@ import {
   Bar, CartesianGrid, Cell, ComposedChart, Legend, Line, ReferenceLine,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
-import { apiErrorMessage, heatingAPI, PricePlan as Plan, PriceSlotKind } from '../services/api';
+import { apiErrorMessage, configAPI, heatingAPI, PricePlan as Plan, PriceSlotKind } from '../services/api';
 import './ModbusApiLive.css';
 
 const TALLINN_TZ = 'Europe/Tallinn';
@@ -61,11 +61,102 @@ const addQuarter = (time: string) => {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 };
 
+const PREFIX = 'heating.price_optimization.';
+
+const SETTINGS: { key: string; label: string; step?: number; min?: number; max?: number; minutes?: boolean }[] = [
+  { key: 'peak_threshold', label: 'Peak threshold (EUR/MWh above median)', step: 5, min: 0, max: 1000 },
+  { key: 'lower', label: 'Lower in peaks (°C)', step: 0.5, min: 0, max: 3 },
+  { key: 'raise', label: 'Raise for compensation (°C)', step: 0.5, min: 0, max: 3 },
+  { key: 'compensation_minutes', label: 'Compensation (minutes)', minutes: true },
+];
+
+/** The price optimisation settings (heating.price_optimization.*); saving re-plans on the server. */
+const OptimisationSettings = ({ onSaved }: { onSaved: () => void }) => {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [saved, setSaved] = useState<Record<string, string>>({});
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    configAPI.getAll()
+      .then(res => {
+        const own = Object.fromEntries(res.data
+          .filter(e => e.key.startsWith(PREFIX))
+          .map(e => [e.key.substring(PREFIX.length), e.value]));
+        setValues(own);
+        setSaved(own);
+      })
+      .catch(err => setStatus({ ok: false, text: `Failed to load settings: ${apiErrorMessage(err)}` }));
+  }, []);
+
+  const changed = Object.keys(values).filter(k => values[k] !== saved[k]);
+
+  const save = async () => {
+    setSaving(true);
+    setStatus(null);
+    let savedCount = 0;
+    try {
+      for (const key of changed) {
+        await configAPI.update(PREFIX + key, values[key]);
+        savedCount++;
+        setSaved(prev => ({ ...prev, [key]: values[key] }));
+      }
+      setStatus({ ok: true, text: 'Saved, plan updated' });
+    } catch (err: any) {
+      setStatus({ ok: false, text: err?.response?.status === 403 ? 'Admin role required' : apiErrorMessage(err) });
+    } finally {
+      setSaving(false);
+      // Each saved value already re-planned on the server, also when a later one failed
+      if (savedCount > 0) onSaved();
+    }
+  };
+
+  if (Object.keys(saved).length === 0) {
+    return status ? <div className="card error">{status.text}</div> : null;
+  }
+
+  const field = { fontSize: '15px', padding: '6px', width: '110px' };
+  return (
+    <div className="card">
+      <h2>Settings</h2>
+      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+        <input
+          type="checkbox"
+          checked={values.enabled === 'true'}
+          onChange={e => setValues(prev => ({ ...prev, enabled: String(e.target.checked) }))}
+        />
+        Optimisation on (writes the plan to the heat pump schedule)
+      </label>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '12px' }}>
+        {SETTINGS.filter(s => values[s.key] !== undefined).map(s => (
+          <label key={s.key} style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', color: '#555' }}>
+            {s.label}
+            {s.minutes ? (
+              <select value={values[s.key]} style={field}
+                onChange={e => setValues(prev => ({ ...prev, [s.key]: e.target.value }))}>
+                {Array.from({ length: 17 }, (_, i) => String(i * 15)).map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            ) : (
+              <input type="number" value={values[s.key]} step={s.step} min={s.min} max={s.max} style={field}
+                onChange={e => setValues(prev => ({ ...prev, [s.key]: e.target.value }))} />
+            )}
+          </label>
+        ))}
+      </div>
+      <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <button onClick={save} disabled={saving || changed.length === 0}>{saving ? 'Saving...' : 'Save'}</button>
+        {status && <span style={{ fontSize: '13px', color: status.ok ? '#2e7d32' : '#c62828' }}>{status.text}</span>}
+      </div>
+    </div>
+  );
+};
+
 const PricePlan = () => {
   const [date, setDate] = useState(todayTallinn());
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,7 +167,7 @@ const PricePlan = () => {
       .catch(err => { if (!cancelled) { setPlan(null); setError(`Failed to load price plan: ${apiErrorMessage(err)}`); } })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [date]);
+  }, [date, reload]);
 
   const slots = plan?.slots ?? [];
   // Optimisation on: show what is really scheduled. Off: preview of what it would do.
@@ -144,7 +235,7 @@ const PricePlan = () => {
             {plan.settingsValid && !plan.enabled && (
               <div style={{ color: '#888', fontSize: '13px' }}>
                 The optimisation is off, so the setpoint chart shows what it would do.
-                It is switched on with <code>heating.price_optimization.enabled = true</code>.
+                It is switched on in the settings below.
               </div>
             )}
           </div>
@@ -232,6 +323,8 @@ const PricePlan = () => {
           </div>
         </>
       )}
+
+      <OptimisationSettings onSaved={() => setReload(r => r + 1)} />
     </div>
   );
 };

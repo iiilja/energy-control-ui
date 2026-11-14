@@ -164,6 +164,20 @@ export const heatingAPI = {
     api.get('/heating/price-plan', { params: { date } }),
 };
 
+export interface ConfigEntry {
+  key: string;
+  value: string;
+  description: string | null;
+  updatedAt: string | null;
+}
+
+export const configAPI = {
+  getAll: (): Promise<AxiosResponse<ConfigEntry[]>> => api.get('/config'),
+  /** Admin only. 400 with the reason in `detail` if the value is invalid. */
+  update: (key: string, value: string): Promise<AxiosResponse<ConfigEntry>> =>
+    api.put(`/config/${encodeURIComponent(key)}`, { value }),
+};
+
 export type PriceSlotKind = 'NORMAL' | 'PEAK' | 'COMPENSATION';
 
 export interface PricePlanSlot {

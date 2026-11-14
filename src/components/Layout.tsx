@@ -31,6 +31,9 @@ const Layout = () => {
         <NavLink to="/sungrow" className={({ isActive }) => `tab${isActive ? ' active' : ''}`}>
           Sungrow PV
         </NavLink>
+        <NavLink to="/settings" className={({ isActive }) => `tab${isActive ? ' active' : ''}`}>
+          Settings
+        </NavLink>
       </nav>
 
       <main className="content">
