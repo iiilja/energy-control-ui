@@ -160,7 +160,42 @@ export const heatingAPI = {
     api.get('/heating/setpoint/weekly-schedule'),
   saveWeeklySchedule: (entries: { dayOfWeek: number; startTime: string; setpoint: number }[]) =>
     api.put('/heating/setpoint/weekly-schedule', entries),
+  getPricePlan: (date: string): Promise<AxiosResponse<PricePlan>> =>
+    api.get('/heating/price-plan', { params: { date } }),
 };
+
+export type PriceSlotKind = 'NORMAL' | 'PEAK' | 'COMPENSATION';
+
+export interface PricePlanSlot {
+  /** Slot start, ISO date-time with offset (Tallinn time) */
+  timestamp: string;
+  /** EUR/MWh */
+  price: number;
+  kind: PriceSlotKind;
+  /** Weekly template */
+  templateSetpoint: number;
+  /** Template shifted for the slot's kind: what the optimisation aims for */
+  optimizedSetpoint: number;
+  /** What the control loop will use (stored slot override, otherwise template) */
+  scheduledSetpoint: number;
+  source: 'TEMPLATE' | 'PRICE' | 'MANUAL';
+}
+
+export interface PricePlan {
+  date: string;
+  enabled: boolean;
+  /** False if a setting is invalid: the optimisation is then off and the defaults are shown */
+  settingsValid: boolean;
+  /** All 15-minute prices of the day known; only then median, threshold and peaks are set */
+  complete: boolean;
+  median: number | null;
+  threshold: number | null;
+  peakThreshold: number;
+  lower: number;
+  raise: number;
+  compensationMinutes: number;
+  slots: PricePlanSlot[];
+}
 
 export interface ManualOverride {
   setpoint: number;
