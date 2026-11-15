@@ -25,8 +25,14 @@ const Layout = () => {
         <NavLink to="/schedule" className={({ isActive }) => `tab${isActive ? ' active' : ''}`}>
           Heating Schedule
         </NavLink>
+        <NavLink to="/price-plan" className={({ isActive }) => `tab${isActive ? ' active' : ''}`}>
+          Price Plan
+        </NavLink>
         <NavLink to="/sungrow" className={({ isActive }) => `tab${isActive ? ' active' : ''}`}>
           Sungrow PV
+        </NavLink>
+        <NavLink to="/settings" className={({ isActive }) => `tab${isActive ? ' active' : ''}`}>
+          Settings
         </NavLink>
       </nav>
 

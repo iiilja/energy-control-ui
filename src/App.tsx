@@ -5,6 +5,8 @@ import Layout from './components/Layout';
 import ModbusApiLive from './components/ModbusApiLive';
 import NordpoolPrices from './components/NordpoolPrices';
 import HeatingSchedule from './components/HeatingSchedule';
+import PricePlan from './components/PricePlan';
+import Settings from './components/Settings';
 import SungrowInverter from './components/SungrowInverter';
 import './App.css';
 
@@ -26,7 +28,9 @@ function AppContent() {
         <Route path="modbus" element={<ModbusApiLive />} />
         <Route path="nordpool" element={<NordpoolPrices />} />
         <Route path="schedule" element={<HeatingSchedule />} />
+        <Route path="price-plan" element={<PricePlan />} />
         <Route path="sungrow" element={<SungrowInverter />} />
+        <Route path="settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/modbus" replace />} />
       </Route>
     </Routes>

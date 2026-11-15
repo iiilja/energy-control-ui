@@ -1,13 +1,13 @@
 # Multi-stage Dockerfile for Energy Control UI
-# Stage 1: Build the React app with Node
-# Stage 2: Serve with nginx
+# Stage 1: build the React app with Node
+# Stage 2: serve the static files with nginx (Node is not in the final image)
 
 # ===========================================================================
 # Build Stage
 # ===========================================================================
-# Build stage runs on the host's native platform (x86_64 on GitHub Actions)
+# Runs on the host's native platform (x86_64 on GitHub Actions)
 # so Node/npm never runs under QEMU emulation.
-FROM --platform=$BUILDPLATFORM node:20-alpine AS build
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 
 WORKDIR /app
 
@@ -20,17 +20,18 @@ RUN npm run build
 # ===========================================================================
 # Runtime Stage
 # ===========================================================================
-FROM nginx:alpine
+# alpine-slim: nginx without the extra modules (njs, image-filter, xslt, geoip) we do not use.
+# Pinned to the stable minor version so the base layers only change with nginx patch
+# releases and Alpine security rebuilds, not with every new nginx version; unchanged
+# layers are not downloaded again on the box. Bump the version now and then.
+FROM nginx:1.30-alpine-slim
 
-# Copy built assets
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy nginx template and entrypoint
-COPY docker/nginx.conf.template /etc/nginx/nginx.conf.template
-COPY docker/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+# The image's own entrypoint renders /etc/nginx/templates/*.template into /etc/nginx/conf.d/
+# with envsubst at start-up. The filter limits it to API_HOST, so nginx variables
+# such as $uri or $host are left alone.
+ENV NGINX_ENVSUBST_FILTER=^API_HOST$
+COPY docker/nginx.conf.template /etc/nginx/templates/default.conf.template
 
 EXPOSE 80
-
-ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["nginx", "-g", "daemon off;"]
